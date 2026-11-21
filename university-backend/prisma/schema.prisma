@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+
+model User {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  email     String   @unique
+  password  String
+  role      String   // "admin" | "teacher" | "student"
+
+  // 🔗 Relations
+  classId      Int?
+  class        Class?      @relation(fields: [classId], references: [id])
+
+  departmentId Int?
+  department   Department? @relation("DepartmentTeachers", fields: [departmentId], references: [id])
+
+  // Teacher relations
+  courses          Course[]          @relation("TeacherCourses")
+  teachersCourses  TeachersCourses[]
+  studentClasses   StudentsClasses[]
+  grades           Grade[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Department {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+
+
+  // relation avec d'autres entités (ex: Student, Teacher, Course)
+ class Class[]
+ courses   Course[]
+ teachers  User[]   @relation("DepartmentTeachers")
+}
+
+
+
+model Class {
+  id          Int      @id @default(autoincrement())
+  name        String
+
+  departmentId Int
+  department  Department @relation(fields: [departmentId], references: [id])
+
+  students       User[]           // role = student
+  studentClasses StudentsClasses[]
+
+  createdAt   DateTime @default(now())
+}
+
+model Course {
+  id           Int        @id @default(autoincrement())
+  name         String
+
+  teacherId    Int?
+  teacher      User?      @relation("TeacherCourses", fields: [teacherId], references: [id])
+
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  exams         Exam[]
+  teachersCourses TeachersCourses[]
+}
+
+model TeachersCourses {
+  id        Int    @id @default(autoincrement())
+  teacherId Int
+  courseId  Int
+
+  // Relations
+  teacher   User   @relation(fields: [teacherId], references: [id])
+  course    Course @relation(fields: [courseId], references: [id])
+}
+
+model StudentsClasses {
+  id        Int    @id @default(autoincrement())
+  studentId Int
+  classId   Int
+
+  // Relations
+  student   User   @relation(fields: [studentId], references: [id])
+  class     Class  @relation(fields: [classId], references: [id])
+}
+
+model Exam {
+  id       Int      @id @default(autoincrement())
+  courseId Int
+  examDate DateTime
+  type     ExamType
+
+  // Relations
+  course   Course   @relation(fields: [courseId], references: [id])
+  grades   Grade[]
+}
+
+model Grade {
+  id        Int    @id @default(autoincrement())
+  studentId Int
+  examId    Int
+  grade     Float
+
+  student   User   @relation(fields: [studentId], references: [id])
+  exam      Exam   @relation(fields: [examId], references: [id])
+
+  @@unique([studentId, examId]) // 🚀 empêche un étudiant d’avoir deux notes pour le même examen
+}
+
+
+enum Role {
+  admin
+  teacher
+  student
+}
+
+enum ExamType {
+  controle
+  final
+  tp
+  oral
+}
+
